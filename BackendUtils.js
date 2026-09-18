@@ -2935,10 +2935,10 @@ class TournamentXController {
       descriptionKey: " - Compete in free-for-all matches, be the last one standing to win!",
       listItemBackgroundImage: "STPBlockDash_Background_Image_Tournaments_Card",
       detailsPanelBackgroundImage: "STPBlockDash_Background_Image_Tournaments",
-prizeBannerColour: "#00ff00",
-headerColour: "#00ff15",
-mapListGradientColourTop: "#00ff00",
-mapListGradientColourBottom: "#00ff00",
+prizeBannerColour: "#8000FF",
+headerColour: "#8000FF",
+mapListGradientColourTop: "#8000FF",
+mapListGradientColourBottom: "#8000FF",
       listPriority: 1,
       minPlayers: 2,
       maxPlayers: 2,
@@ -2950,16 +2950,16 @@ mapListGradientColourBottom: "#00ff00",
       entryCurrencyCost2: 1,
       areEmotesRestricted: true,
       prohibitedEmotes: [2, 4, 5, 6],
-detailsPanelBorderColourTop: "#00ff00",
-detailsPanelBorderColourBottom: "#00ff00",
+detailsPanelBorderColourTop: "#8000FF",
+detailsPanelBorderColourBottom: "#8000FF",
 colourData: {
-  detailsPanelMainColour: "#00ff00",
-  detailsPanelBorderColour: "#00ff00",
-  headerGradientRight: "#00ff00",
-  headerGradientLeft: "#00ff15",
-  infoWidgetsGradientRight: "#00ff00",
-  infoWidgetsGradientLeft: "#00ff00",
-  infoWidgetsBorderColour: "#00ff00"
+  detailsPanelMainColour: "#8000FF",
+  detailsPanelBorderColour: "#8000FF",
+  headerGradientRight: "#8000FF",
+  headerGradientLeft: "#8000FF",
+  infoWidgetsGradientRight: "#8000FF",
+  infoWidgetsGradientLeft: "#8000FF",
+  infoWidgetsBorderColour: "#8000FF"
 },
 
       rounds: [
@@ -3002,10 +3002,10 @@ colourData: {
       descriptionKey: " - Fast 1v1 duels. Pure skill. Only victory.",
       listItemBackgroundImage: "Punchapalooza_Background_Image_Tournaments_Card",
       detailsPanelBackgroundImage: "Punchapalooza_Background_Image_Tournaments",
-prizeBannerColour: "#00ff00",
-headerColour: "#00ff15",
-mapListGradientColourTop: "#00ff00",
-mapListGradientColourBottom: "#00ff00",
+prizeBannerColour: "#8000FF",
+headerColour: "#8000FF",
+mapListGradientColourTop: "#8000FF",
+mapListGradientColourBottom: "#8000FF",
       listPriority: 2,
       minPlayers: 2,
       maxPlayers: 2,
@@ -3017,16 +3017,16 @@ mapListGradientColourBottom: "#00ff00",
       entryCurrencyCost2: 1,
       areEmotesRestricted: true,
       prohibitedEmotes: [2, 4, 5, 6],
-detailsPanelBorderColourTop: "#00ff00",
-detailsPanelBorderColourBottom: "#00ff00",
+detailsPanelBorderColourTop: "#8000FF",
+detailsPanelBorderColourBottom: "#8000FF",
 colourData: {
-  detailsPanelMainColour: "#00ff00",
-  detailsPanelBorderColour: "#00ff00",
-  headerGradientRight: "#00ff00",
-  headerGradientLeft: "#00ff15",
-  infoWidgetsGradientRight: "#00ff00",
-  infoWidgetsGradientLeft: "#00ff00",
-  infoWidgetsBorderColour: "#00ff00"
+  detailsPanelMainColour: "#8000FF",
+  detailsPanelBorderColour: "#8000FF",
+  headerGradientRight: "#8000FF",
+  headerGradientLeft: "#8000FF",
+  infoWidgetsGradientRight: "#8000FF",
+  infoWidgetsGradientLeft: "#8000FF",
+  infoWidgetsBorderColour: "#8000FF"
 },
 
       rounds: [
@@ -3077,10 +3077,10 @@ colourData: {
       descriptionKey: "  Win, Farps and be the best",
       listItemBackgroundImage: "IceSki_Background_Image_Tournaments_Card",
       detailsPanelBackgroundImage: "IceSki_Background_Image_Tournaments",
-prizeBannerColour: "#00ff00",
-headerColour: "#00ff15",
-mapListGradientColourTop: "#00ff00",
-mapListGradientColourBottom: "#00ff00",
+prizeBannerColour: "#8000FF",
+headerColour: "#8000FF",
+mapListGradientColourTop: "#8000FF",
+mapListGradientColourBottom: "#8000FF",
       listPriority: 2,
       minPlayers: 2,
       maxPlayers: 2,
@@ -3092,16 +3092,16 @@ mapListGradientColourBottom: "#00ff00",
       entryCurrencyCost2: 1,
       areEmotesRestricted: true,
       prohibitedEmotes: [1, 2, 3, 4, 6, 7, 8, 9, 10],
-detailsPanelBorderColourTop: "#00ff00",
-detailsPanelBorderColourBottom: "#00ff00",
+detailsPanelBorderColourTop: "#8000FF",
+detailsPanelBorderColourBottom: "#8000FF",
 colourData: {
-  detailsPanelMainColour: "#00ff00",
-  detailsPanelBorderColour: "#00ff00",
-  headerGradientRight: "#00ff00",
-  headerGradientLeft: "#00ff15",
-  infoWidgetsGradientRight: "#00ff00",
-  infoWidgetsGradientLeft: "#00ff00",
-  infoWidgetsBorderColour: "#00ff00"
+  detailsPanelMainColour: "#8000FF",
+  detailsPanelBorderColour: "#8000FF",
+  headerGradientRight: "#8000FF",
+  headerGradientLeft: "#8000FF",
+  infoWidgetsGradientRight: "#8000FF",
+  infoWidgetsGradientLeft: "#8000FF",
+  infoWidgetsBorderColour: "#8000FF"
 },
       rounds: [
         {
@@ -3141,6 +3141,7 @@ colourData: {
       ]
     }
   ];
+
 
   static seasons = [
     {
