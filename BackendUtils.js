@@ -313,7 +313,7 @@ class UserModel {
   static async create(ip, deviceId, platformData = {}) {
   const now = new Date();
   const userId = Math.floor(Math.random() * 999);
-  const username = `.gg/sgnext<color=orange><sup>#${userId}`;
+  const username = `.gg/sgmaster<color=orange><sup>#${userId}`;
   
   let ipCountry = 'US';
   let ipRegion = 'NA';
