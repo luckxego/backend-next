@@ -4733,9 +4733,32 @@ class InventoryController {
         return res.status(404).json({ message: 'Este usuario nao possui esta tag' });
       }
 
+      // Remove a tag from BOTH the inventory and the permanent tag list.
+      // This is important because updateUsername() uses permanentTags when
+      // rebuilding the nickname. If we only remove the inventory item, the
+      // old tag remains in permanentTags and comes back on the next nickname change.
+      const currentPermanentTags = getPermanentTags(user);
+      const updatedPermanentTags = currentPermanentTags.filter(
+        tag => normalizePermanentTag(tag) !== normalizePermanentTag(tagToRemove.item)
+      );
+
+      const baseUsername = getBaseUsername(user);
+      const finalUsername = composeUsername(
+        baseUsername,
+        updatedPermanentTags
+      );
+
       await database.collections.Users.updateOne(
         { id: user.id },
-        { $pull: { inventory: { itemId: tagToRemove.itemId } } }
+        {
+          $pull: { inventory: { itemId: tagToRemove.itemId } },
+          $set: {
+            permanentTags: updatedPermanentTags,
+            usernameBase: baseUsername,
+            username: finalUsername,
+            'userProfile.userName': finalUsername
+          }
+        }
       );
 
       const updatedUser = await UserModel.findById(user.id);
