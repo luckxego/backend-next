@@ -309,11 +309,126 @@ database.connect().catch(err => {
   process.exit(1);
 });
 
+
+/*
+ * ============================
+ * SISTEMA DE TAGS PERMANENTES
+ * ============================
+ *
+ * permanentTags guarda as tags que devem continuar no nick,
+ * mesmo que o nome base do jogador seja alterado.
+ *
+ * Exemplo:
+ *   base: "Luckx"
+ *   permanentTags: ["<#000>[W]"]
+ *   username final: "Luckx <#000>[W]"
+ *
+ * A tag é salva exatamente como foi enviada. Isso permite usar
+ * qualquer cor/formato sem precisar criar uma lista fixa de cores.
+ */
+
+function normalizePermanentTag(tag) {
+  if (typeof tag !== "string") return null;
+
+  const value = tag.trim();
+  if (!value) return null;
+
+  // Mantém compatibilidade com tags antigas no formato "tag_xxx".
+  return value.replace(/^tag_/, "");
+}
+
+function uniquePermanentTags(tags) {
+  if (!Array.isArray(tags)) return [];
+
+  return [...new Set(
+    tags
+      .map(normalizePermanentTag)
+      .filter(Boolean)
+  )];
+}
+
+function getInventoryTags(user) {
+  const inventory = Array.isArray(user?.inventory)
+    ? user.inventory
+    : [];
+
+  return uniquePermanentTags(
+    inventory
+      .filter(item => item?.itemType === "TAG" && typeof item.item === "string")
+      .map(item => {
+        let tag = item.item;
+
+        // Mantém a mesma lógica que o backend já usava.
+        if (item.amount > 1) {
+          tag += `+${item.amount}`;
+        }
+
+        return tag;
+      })
+  );
+}
+
+function getPermanentTags(user) {
+  const savedTags = Array.isArray(user?.permanentTags)
+    ? user.permanentTags
+    : [];
+
+  /*
+   * Também lê as TAGs do inventário para migrar usuários antigos
+   * automaticamente. Depois que a tag for salva em permanentTags,
+   * ela continua mesmo se sair do inventário.
+   */
+  return uniquePermanentTags([
+    ...savedTags,
+    ...getInventoryTags(user)
+  ]);
+}
+
+function buildUsernameWithPermanentTags(baseUsername, tags) {
+  const base = String(baseUsername || "").trim();
+  const cleanTags = uniquePermanentTags(tags);
+
+  if (!cleanTags.length) {
+    return base;
+  }
+
+  return `${base} ${cleanTags.join(" ")}`;
+}
+
+function getBaseUsername(user) {
+  if (
+    typeof user?.usernameBase === "string" &&
+    user.usernameBase.trim()
+  ) {
+    return user.usernameBase.trim();
+  }
+
+  let base = String(user?.username || "").trim();
+
+  /*
+   * Compatibilidade com contas antigas que ainda não possuem
+   * usernameBase. Remove do final as tags já conhecidas.
+   */
+  const tags = getPermanentTags(user)
+    .slice()
+    .sort((a, b) => b.length - a.length);
+
+  for (const tag of tags) {
+    const suffix = ` ${tag}`;
+
+    while (base.endsWith(suffix)) {
+      base = base.slice(0, -suffix.length).trim();
+    }
+  }
+
+  return base;
+}
+
 class UserModel {
   static async create(ip, deviceId, platformData = {}) {
   const now = new Date();
   const userId = Math.floor(Math.random() * 999);
-  const username = `.gg/sgmaster<color=orange><sup>#${userId}`;
+  const username = `.gg/sgnext<color=orange><sup>#${userId}`;
   
   let ipCountry = 'US';
   let ipRegion = 'NA';
@@ -335,6 +450,9 @@ class UserModel {
     deviceId,
     stumbleId: CryptoUtils.GenerateId().toUpperCase(),
     username,
+    // Nome base, sem as tags permanentes.
+    usernameBase: username,
+    permanentTags: [],
     country: ipCountry,
     region: ipRegion,
     token: CryptoUtils.SessionToken(),
@@ -959,28 +1077,39 @@ const featureFlags = [
       return res.status(403).json({ message: 'caracteres invalidos' });
     }
 
-    const existingUser = await database.getUserByQuery({ username: Username });
-    if (existingUser) {
+    /*
+     * Pega as tags permanentes já salvas.
+     * Para usuários antigos, as TAGs do inventário entram aqui
+     * automaticamente e passam a ser salvas em permanentTags.
+     */
+    const permanentTags = getPermanentTags(user);
+
+    const finalUsername = buildUsernameWithPermanentTags(
+      Username,
+      permanentTags
+    );
+
+    /*
+     * A verificação agora usa o nick FINAL.
+     * Assim evitamos colisão entre:
+     *   Luckx <#000>[W]
+     *   Luckx <#000>[W]
+     */
+    const existingUser = await database.getUserByQuery({
+      username: finalUsername
+    });
+
+    if (
+      existingUser &&
+      existingUser.stumbleId !== user.stumbleId
+    ) {
       return res.status(409).json({ message: 'Username already taken' });
     }
 
-    const tagItems = user.inventory
-      ? user.inventory.filter(i => i.itemType === "TAG" && typeof i.item === "string")
+    const oldNames = Array.isArray(user.oldNames)
+      ? user.oldNames
       : [];
 
-    const tagsToAdd = tagItems.map(t => {
-      let tag = t.item.replace(/^tag_/, '');
-      if (t.amount > 1) tag += `+${t.amount}`;
-      return tag;
-    });
-
-    let finalUsername = Username;
-
-    if (tagsToAdd.length > 0) {
-      finalUsername += " " + tagsToAdd.join(" ");
-    }
-
-    const oldNames = Array.isArray(user.oldNames) ? user.oldNames : [];
     oldNames.push({
       name: user.username,
       changedAt: new Date()
@@ -988,22 +1117,39 @@ const featureFlags = [
 
     const updates = {
       username: finalUsername,
+      usernameBase: Username,
+      permanentTags: permanentTags,
       "userProfile.userName": finalUsername,
       oldNames: oldNames
     };
 
-    const updatedUser = await UserModel.update(user.stumbleId, updates);
-    await UserModel.removeBalance(user.deviceId, "gems", 100);
+    const updatedUser = await UserModel.update(
+      user.stumbleId,
+      updates
+    );
 
-    console.log(`${user.username} changed username to ${finalUsername}`);
+    await UserModel.removeBalance(
+      user.deviceId,
+      "gems",
+      100
+    );
 
-    res.status(200).json({ User: updatedUser });
+    console.log(
+      `${user.username} changed username to ${finalUsername}`
+    );
+
+    res.status(200).json({
+      User: updatedUser
+    });
 
   } catch (err) {
     console.error("error updating username:", err);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({
+      message: "internal server error"
+    });
   }
 }
+
 
 
 
@@ -3142,7 +3288,6 @@ colourData: {
     }
   ];
 
-
   static seasons = [
     {
       awards: [
@@ -4521,9 +4666,34 @@ class InventoryController {
         acquiredDate: new Date()
       };
 
+      /*
+       * A tag adicionada também vira permanente.
+       * O nick é atualizado imediatamente, sem depender de o usuário
+       * trocar o nome novamente.
+       */
+      const permanentTags = uniquePermanentTags([
+        ...getPermanentTags(user),
+        finalTag
+      ]);
+
+      const baseUsername = getBaseUsername(user);
+
+      const finalUsername = buildUsernameWithPermanentTags(
+        baseUsername,
+        permanentTags
+      );
+
       await database.collections.Users.updateOne(
         { id: user.id },
-        { $push: { inventory: newTagItem } }
+        {
+          $push: { inventory: newTagItem },
+          $set: {
+            username: finalUsername,
+            usernameBase: baseUsername,
+            permanentTags: permanentTags,
+            "userProfile.userName": finalUsername
+          }
+        }
       );
 
       const updatedUser = await UserModel.findById(user.id);
@@ -4577,6 +4747,11 @@ class InventoryController {
         return res.status(404).json({ message: 'Este usuario nao possui esta tag' });
       }
 
+      /*
+       * IMPORTANTE:
+       * remover a tag do inventário NÃO remove a tag permanente
+       * do nick. Ela continua salva em permanentTags.
+       */
       await database.collections.Users.updateOne(
         { id: user.id },
         { $pull: { inventory: { itemId: tagToRemove.itemId } } }
