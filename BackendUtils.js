@@ -4644,6 +4644,9 @@ class InventoryController {
         item.item === finalTag
       );
 
+      // TAGs are a single active slot: when a new tag is set, every old
+      // tag is replaced. This prevents old tags such as [W] or [MOD]
+      // from surviving in permanentTags and returning on a nickname change.
       if (existingTag) {
         Console.error('Inventory', 'User already has this tag:', user.id);
         return res.status(409).json({ message: 'User already has this tag' });
@@ -4658,10 +4661,13 @@ class InventoryController {
         acquiredDate: new Date()
       };
 
-      const permanentTags = uniquePermanentTags([
-        ...getPermanentTags(user),
-        finalTag
-      ]);
+      // The inventory is the source of truth for the currently active tag.
+      // Remove all previous TAG items before saving the new one.
+      const inventoryWithoutOldTags = inventory.filter(item =>
+        !(item && item.itemType === 'TAG')
+      );
+      const updatedInventory = [...inventoryWithoutOldTags, newTagItem];
+      const permanentTags = [finalTag];
 
       const baseUsername = getBaseUsername(user);
       const finalUsername = composeUsername(
@@ -4672,8 +4678,8 @@ class InventoryController {
       await database.collections.Users.updateOne(
         { id: user.id },
         {
-          $push: { inventory: newTagItem },
           $set: {
+            inventory: updatedInventory,
             permanentTags: permanentTags,
             usernameBase: baseUsername,
             username: finalUsername,
