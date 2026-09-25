@@ -351,19 +351,24 @@ function getPermanentTags(user) {
   // NEVER rebuild it from the current username, because old tags can remain
   // in an old username and would resurrect themselves after a nickname change.
   if (Array.isArray(user.permanentTags) && user.permanentTags.length > 0) {
-    return uniquePermanentTags([user.permanentTags[0]]);
+    // If old data contains multiple tags, the LAST one is the newest/current
+    // tag. Collapse everything else immediately.
+    const latestTag = user.permanentTags[user.permanentTags.length - 1];
+    return uniquePermanentTags([latestTag]);
   }
 
-  // Legacy fallback: if an old account has no permanentTags yet, recover the
-  // first TAG from inventory. It is immediately treated as the only active tag.
+  // Legacy fallback: if an old account has no permanentTags yet, use the LAST
+  // TAG in inventory because new tags are appended/replaced there.
   if (Array.isArray(user.inventory)) {
-    const inventoryTag = user.inventory.find(
+    const inventoryTags = user.inventory.filter(
       item =>
         item &&
         item.itemType === 'TAG' &&
         typeof item.item === 'string' &&
         item.item.trim()
     );
+
+    const inventoryTag = inventoryTags[inventoryTags.length - 1];
 
     if (inventoryTag) {
       let tag = inventoryTag.item;
@@ -1074,7 +1079,26 @@ const featureFlags = [
 
       // The active permanent tag is stored separately and survives nickname changes.
       // Never extract old tags from the username itself.
+      // Resolve exactly ONE current tag. If the database still contains old
+      // tags from the previous system, the newest tag wins and the old ones
+      // are physically cleaned from the user record below.
       const permanentTags = getPermanentTags(currentUser);
+
+      const cleanedInventory = Array.isArray(currentUser.inventory)
+        ? currentUser.inventory.filter(item => item && item.itemType !== 'TAG')
+        : [];
+
+      const currentTag = permanentTags[0];
+      if (currentTag) {
+        cleanedInventory.push({
+          userId: currentUser.id,
+          itemId: Math.floor(Math.random() * 10000) + 8000,
+          itemType: 'TAG',
+          item: currentTag,
+          amount: 1,
+          acquiredDate: new Date()
+        });
+      }
 
       const finalUsername = composeUsername(Username, permanentTags);
 
@@ -1103,6 +1127,7 @@ const featureFlags = [
         username: finalUsername,
         usernameBase: Username,
         permanentTags: permanentTags,
+        inventory: cleanedInventory,
         'userProfile.userName': finalUsername,
         oldNames: oldNames
       };
