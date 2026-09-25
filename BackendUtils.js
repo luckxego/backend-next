@@ -346,19 +346,11 @@ function getTagsFromUsername(username) {
 function getPermanentTags(user) {
   if (!user) return [];
 
-  // There is ONLY ONE active permanent tag.
-  // permanentTags is the source of truth.
-  // NEVER rebuild it from the current username, because old tags can remain
-  // in an old username and would resurrect themselves after a nickname change.
-  if (Array.isArray(user.permanentTags) && user.permanentTags.length > 0) {
-    // If old data contains multiple tags, the LAST one is the newest/current
-    // tag. Collapse everything else immediately.
-    const latestTag = user.permanentTags[user.permanentTags.length - 1];
-    return uniquePermanentTags([latestTag]);
-  }
-
-  // Legacy fallback: if an old account has no permanentTags yet, use the LAST
-  // TAG in inventory because new tags are appended/replaced there.
+  // The INVENTORY is the source of truth for the active tag.
+  // addTag() always removes every old TAG item and inserts only the new one.
+  // This is important for old accounts where permanentTags may still contain
+  // a stale tag such as [W]. Never let stale permanentTags override the tag
+  // that is currently present in the inventory.
   if (Array.isArray(user.inventory)) {
     const inventoryTags = user.inventory.filter(
       item =>
@@ -368,16 +360,24 @@ function getPermanentTags(user) {
         item.item.trim()
     );
 
-    const inventoryTag = inventoryTags[inventoryTags.length - 1];
-
-    if (inventoryTag) {
-      let tag = inventoryTag.item;
-      if (inventoryTag.amount > 1) tag += `+${inventoryTag.amount}`;
+    if (inventoryTags.length > 0) {
+      const currentInventoryTag = inventoryTags[inventoryTags.length - 1];
+      let tag = currentInventoryTag.item;
+      if (currentInventoryTag.amount > 1) {
+        tag += `+${currentInventoryTag.amount}`;
+      }
       return uniquePermanentTags([tag]);
     }
   }
 
-  // IMPORTANT: do not read tags from user.username here.
+  // Fallback only for data created before the inventory TAG system existed.
+  // If permanentTags contains old multiple values, use the newest one.
+  if (Array.isArray(user.permanentTags) && user.permanentTags.length > 0) {
+    const latestTag = user.permanentTags[user.permanentTags.length - 1];
+    return uniquePermanentTags([latestTag]);
+  }
+
+  // IMPORTANT: never read tags from user.username here.
   // The username is only the rendered result, never the source of truth.
   return [];
 }
