@@ -749,7 +749,7 @@ class UserModel {
    
      if (!authHeader)
     {
-      return res.status(401).json("naocara");
+      return res.status(401).json("Luckx Chief Tecnology Officer (CTO)");
     } 
  
     let authData = {};
