@@ -346,36 +346,35 @@ function getTagsFromUsername(username) {
 function getPermanentTags(user) {
   if (!user) return [];
 
-  const savedTags = Array.isArray(user.permanentTags)
-    ? user.permanentTags
-    : [];
+  // There is ONLY ONE active permanent tag.
+  // permanentTags is the source of truth.
+  // NEVER rebuild it from the current username, because old tags can remain
+  // in an old username and would resurrect themselves after a nickname change.
+  if (Array.isArray(user.permanentTags) && user.permanentTags.length > 0) {
+    return uniquePermanentTags([user.permanentTags[0]]);
+  }
 
-  const inventoryTags = Array.isArray(user.inventory)
-    ? user.inventory
-        .filter(
-          item =>
-            item &&
-            item.itemType === 'TAG' &&
-            typeof item.item === 'string'
-        )
-        .map(item => {
-          let tag = item.item;
+  // Legacy fallback: if an old account has no permanentTags yet, recover the
+  // first TAG from inventory. It is immediately treated as the only active tag.
+  if (Array.isArray(user.inventory)) {
+    const inventoryTag = user.inventory.find(
+      item =>
+        item &&
+        item.itemType === 'TAG' &&
+        typeof item.item === 'string' &&
+        item.item.trim()
+    );
 
-          if (item.amount > 1) {
-            tag += `+${item.amount}`;
-          }
+    if (inventoryTag) {
+      let tag = inventoryTag.item;
+      if (inventoryTag.amount > 1) tag += `+${inventoryTag.amount}`;
+      return uniquePermanentTags([tag]);
+    }
+  }
 
-          return tag;
-        })
-    : [];
-
-  const tagsFromCurrentUsername = getTagsFromUsername(user.username);
-
-  return uniquePermanentTags([
-    ...savedTags,
-    ...inventoryTags,
-    ...tagsFromCurrentUsername
-  ]);
+  // IMPORTANT: do not read tags from user.username here.
+  // The username is only the rendered result, never the source of truth.
+  return [];
 }
 
 function getBaseUsername(user) {
@@ -1073,7 +1072,8 @@ const featureFlags = [
       const freshUser = await UserModel.findByStumbleId(user.stumbleId);
       const currentUser = freshUser || user;
 
-      // Junta permanentTags + TAGs do inventário + TAGs que já estavam no nick.
+      // The active permanent tag is stored separately and survives nickname changes.
+      // Never extract old tags from the username itself.
       const permanentTags = getPermanentTags(currentUser);
 
       const finalUsername = composeUsername(Username, permanentTags);
