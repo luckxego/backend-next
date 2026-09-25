@@ -339,18 +339,34 @@ function getTagsFromUsername(username) {
   if (typeof username !== 'string') return [];
 
   // Ex.: Luckx <#000>[W] <#FF0000>[VIP]
-  const matches = username.match(/<#[^>]+>\[[^\]]+\](?:\+\d+)?/g);
+  const matches = username.match(/<#[^>]+>\s*\[[^\]]+\](?:\+\d+)?/g);
   return matches ? uniquePermanentTags(matches) : [];
 }
 
 function getPermanentTags(user) {
   if (!user) return [];
 
-  // The INVENTORY is the source of truth for the active tag.
-  // addTag() always removes every old TAG item and inserts only the new one.
-  // This is important for old accounts where permanentTags may still contain
-  // a stale tag such as [W]. Never let stale permanentTags override the tag
-  // that is currently present in the inventory.
+  // IMPORTANT: the current username is checked FIRST.
+  // The tag system in this project can be changed directly in MongoDB.
+  // In that case the username may already contain the NEW tag while
+  // inventory/permanentTags still contain an OLD tag. If we read inventory
+  // first, the old tag comes back after the next nickname change.
+  //
+  // Example:
+  //   MongoDB username: Luckx <#000>[DEV]
+  //   inventory:        <#000>[W]       (old)
+  //   permanentTags:    <#000>[W]       (old)
+  // The active tag MUST be DEV because that is what is currently in the nick.
+  if (typeof user.username === 'string' && user.username.trim()) {
+    const usernameTags = getTagsFromUsername(user.username);
+    if (usernameTags.length > 0) {
+      // Only one tag is active. If old data contains multiple tags in the
+      // username, keep the last one (the newest/current tag).
+      return uniquePermanentTags([usernameTags[usernameTags.length - 1]]);
+    }
+  }
+
+  // If there is no tag in the username, use the newest inventory TAG.
   if (Array.isArray(user.inventory)) {
     const inventoryTags = user.inventory.filter(
       item =>
@@ -370,15 +386,12 @@ function getPermanentTags(user) {
     }
   }
 
-  // Fallback only for data created before the inventory TAG system existed.
-  // If permanentTags contains old multiple values, use the newest one.
+  // Last fallback for old accounts that only have permanentTags saved.
   if (Array.isArray(user.permanentTags) && user.permanentTags.length > 0) {
     const latestTag = user.permanentTags[user.permanentTags.length - 1];
     return uniquePermanentTags([latestTag]);
   }
 
-  // IMPORTANT: never read tags from user.username here.
-  // The username is only the rendered result, never the source of truth.
   return [];
 }
 
